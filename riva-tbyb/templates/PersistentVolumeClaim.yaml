@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  annotations:
+    volume.beta.kubernetes.io/storage-provisioner: cluster.local/nfs-subdir-external-provisioner
+    helm.sh/resource-policy: keep
+  name: {{ .Values.riva.volume.persistentVolumeClaim }}-artifact-volume
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/instance: {{ template "riva-server.fullname" . }}
+    chart: {{ template "riva-server.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    type: {{ template "riva-server.fullname" . }}
+spec:
+  accessModes:
+  - {{ .Values.riva.volume.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.riva.volume.storage }}
+  volumeMode: Filesystem
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  annotations:
+    volume.beta.kubernetes.io/storage-provisioner: cluster.local/nfs-subdir-external-provisioner
+    helm.sh/resource-policy: keep
+  name: {{ .Values.riva.volume.persistentVolumeClaim }}-workdir
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/instance: {{ template "riva-server.fullname" . }}
+    chart: {{ template "riva-server.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    type: {{ template "riva-server.fullname" . }}
+spec:
+  accessModes:
+  - {{ .Values.riva.volume.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.riva.volume.storage }}
+  volumeMode: Filesystem

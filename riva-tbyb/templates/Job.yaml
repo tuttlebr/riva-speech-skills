@@ -1,0 +1,128 @@
+# Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#  * Neither the name of NVIDIA CORPORATION nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
+# EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+# OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+{{- $root := . }}
+{{- $artifacturl := "" }}
+{{- $image_version := "" }}
+{{- $model_version := "" }}
+{{- $client_image := "" }}
+{{- $server_image := "" }}
+{{- $servicemaker_image := "" }}
+{{- if (ne (len .Values.riva_ngc_team) 0) }}
+{{- $artifacturl = printf "%s/%s" .Values.riva_ngc_org .Values.riva_ngc_team }}
+{{- else }}
+{{- $artifacturl = printf "%s" .Values.riva_ngc_org }}
+{{- end }}
+{{- $image_version = printf "%s" .Values.riva_ngc_image_version }}
+{{- $model_version = printf "%s" .Values.riva_ngc_model_version }}
+{{- if .Values.raw_server_image }}
+{{- $server_image = printf "%s" .Values.raw_server_image }}
+{{- $client_image = printf "%s" .Values.raw_client_image }}
+{{- else }}
+{{- $server_image = printf "%s/%s/%s:%s-server" .Values.imageurl $artifacturl .Values.riva.speechImageName $image_version }}
+{{- $client_image = printf "%s/%s/%s-client:%s" .Values.imageurl $artifacturl .Values.riva.speechImageName $image_version }}
+{{- end }}
+{{- if .Values.raw_servicemaker_image }}
+{{- $servicemaker_image = printf "%s" .Values.raw_servicemaker_image }}
+{{- else }}
+{{- $servicemaker_image = printf "%s/%s/%s:%s-servicemaker" .Values.imageurl $artifacturl .Values.modelRepoGenerator.imageName $image_version }}
+{{- end }}
+
+{{- if .Values.demoWorkload.start }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ template "riva-server.fullname" . }}-perfanalyzer
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/instance: {{ template "riva-server.fullname" . }}
+    chart: {{ template "riva-server.chart" . }}
+    heritage: {{ .Release.Service }}
+    release: {{ .Release.Name }}
+    type: {{ template "riva-server.fullname" . }}-perfanalyzer
+spec:
+  suspend: true
+  parallelism: 2
+  completions: 6
+  ttlSecondsAfterFinished: 0
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/instance: {{ template "riva-server.fullname" . }}
+        release: {{ .Release.Name }}
+        type: {{ template "riva-server.fullname" . }}-perfanalyzer
+    spec:
+      restartPolicy: Never
+    {{- if .Values.demoWorkload.nodeName }}
+      nodeName: {{ .Values.demoWorkload.nodeName }}
+    {{- end }}
+      containers:
+        - name: riva-perf-analyzer
+          image: {{ $client_image }}
+          workingDir: /work/wav
+          env:
+            - name: HOME
+              value: "/workspace"
+            - name: EXPRESS_SECRET
+              value: "gVkYp3s6"
+            - name: RIVA_API_URL
+              value: "{{ template "riva-server.fullname" . }}-traefik.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.traefik.ports.tritonriva.exposedPort }}"
+            - name: REDIS_URL
+              value: "redis://0.0.0.0:6379"
+            - name: NODE_ENV
+              value: "production"
+            - name: ASR_LANGS
+              value: {{ quote .Values.modelRepoGenerator.ngcModelConfigs.asr_langs }}
+            - name: TTS_VOICES
+              value: {{ quote .Values.modelRepoGenerator.ngcModelConfigs.tts_voices }}
+            - name: PORT
+              value: "8015"
+            - name: METRICS_PORT
+              value: "8016"
+        {{- with .Values.demoWorkload.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+        {{- end }}
+          args:
+            - riva_streaming_asr_client
+            - --riva_uri={{ template "riva-server.fullname" . }}-traefik.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.traefik.ports.tritonriva.exposedPort }}
+            - --chunk_duration_ms=800
+            - --simulate_realtime=true
+            - --automatic_punctuation=true
+            - --num_parallel_requests={{ .Values.demoWorkload.num_parallel_requests }}
+            - --word_time_offsets=true
+            - --print_transcripts=false
+            - --interim_results=false
+            - --num_iterations={{ mul .Values.demoWorkload.num_parallel_requests 3 }}
+            - --audio_file=en-US_sample.wav
+
+      imagePullSecrets:
+        - name: imagepullsecret
+      initContainers:
+        - name: init-riva-perf-analyzer
+          image: busybox:1.28
+          command: ['sh', '-c', 'until nslookup {{ template "riva-server.fullname" . }}-{{ sub .Values.autoscaling.minReplicas 1 }}.{{ template "riva-server.fullname" . }}.$(cat /var/run/secrets/kubernetes.io/serviceaccount/namespace).svc.cluster.local; do echo waiting for {{ template "riva-server.fullname" . }} server instance.; sleep 2; done']
+{{- end -}}

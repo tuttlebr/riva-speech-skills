@@ -1,0 +1,16 @@
+apiVersion: v1
+appVersion: 2.0.0
+description: Riva Speech Services
+name: riva-tbyb
+version: 2.0.0
+dependencies:
+  - name: traefik
+    version: "~10.6.2"
+    repository: "https://helm.traefik.io/traefik"
+    tags:
+      - loadBalancing
+  - name: prometheus-adapter
+    version: "~3.0.0"
+    repository: "https://prometheus-community.github.io/helm-charts"
+    tags:
+      - autoscaling

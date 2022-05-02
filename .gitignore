@@ -1,0 +1,7 @@
+ignore*
+*.tgz
+@eaDir/
+.vscode/*
+riva-api-*.tgz
+*quickstart_*/
+assets/*

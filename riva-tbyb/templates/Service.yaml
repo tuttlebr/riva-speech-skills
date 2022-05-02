@@ -1,0 +1,112 @@
+# Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#  * Neither the name of NVIDIA CORPORATION nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
+# EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+# OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "riva-server.fullname" . }}-frontend
+  namespace: {{ .Release.Namespace }}
+  labels:
+    chart: {{ template "riva-server.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ template "riva-server.fullname" . }}
+spec:
+  type: NodePort
+  ports:
+    - port: 8015
+      targetPort: assistant
+      nodePort: {{ .Values.assistant.nodePort }}
+      name: assistant
+    - port: 9000
+      targetPort: peer
+      nodePort: {{ add .Values.assistant.nodePort 1 }}
+      name: peer
+    - port: 8081
+      targetPort: redis-commander
+      nodePort: {{ add .Values.assistant.nodePort 2 }}
+      name: redis-commander
+  selector:
+    app.kubernetes.io/instance: {{ template "riva-server.fullname" . }}
+    release: {{ .Release.Name }}
+    type: {{ template "riva-server.fullname" . }}-frontend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "riva-server.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app.kubernetes.io/instance: {{ template "riva-server.fullname" . }}
+    chart: {{ template "riva-server.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ template "riva-server.fullname" . }}
+spec:
+  clusterIP: None
+  ports:
+    - port: 8000
+      targetPort: http
+      protocol: TCP
+      name: triton-http
+    - port: 8001
+      targetPort: grpc
+      protocol: TCP
+      name: triton-grpc
+    - port: 8002
+      targetPort: metrics
+      protocol: TCP
+      name: triton-metrics
+    - port: 50051
+      targetPort: riva-grpc
+      protocol: TCP
+      name: riva-speech
+  selector:
+    app.kubernetes.io/instance: {{ template "riva-server.fullname" . }}
+    release: {{ .Release.Name }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "riva-server-metrics.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: {{ template "riva-server-metrics.name" . }}
+    chart: {{ template "riva-server.chart" . }}
+    release: {{ .Release.Name }}
+    heritage: {{ .Release.Service }}
+    app.kubernetes.io/instance: {{ template "riva-server.fullname" . }}
+  annotations:
+    alpha.monitoring.coreos.com/non-namespaced: "true"
+spec:
+  ports:
+  - name: metrics
+    port: 8080
+    targetPort: metrics
+    protocol: TCP
+  selector:
+    app.kubernetes.io/instance: {{ template "riva-server.fullname" . }}
+    release: {{ .Release.Name }}

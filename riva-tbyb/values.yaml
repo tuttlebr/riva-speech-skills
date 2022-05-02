@@ -1,0 +1,274 @@
+# Copyright (c) 2019, NVIDIA CORPORATION. All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions
+# are met:
+#  * Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+#  * Redistributions in binary form must reproduce the above copyright
+#    notice, this list of conditions and the following disclaimer in the
+#    documentation and/or other materials provided with the distribution.
+#  * Neither the name of NVIDIA CORPORATION nor the names of its
+#    contributors may be used to endorse or promote products derived
+#    from this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY
+# EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
+# PURPOSE ARE DISCLAIMED.  IN NO EVENT SHALL THE COPYRIGHT OWNER OR
+# CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+# EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
+# PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR
+# PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+# OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+tags:
+  # Autoscaling will enable horizontal pod autoscaling based on the custom
+  # Prometheus metric avg_time_queue_us.
+  autoscaling: true
+  # Loadbalancing will enable the Traefik loadbalancer as a service, this
+  # also has optional load balancing specs.
+  loadBalancing: true
+
+traefik:
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    metrics:
+      - type: Resource
+        resource:
+          name: cpu
+          targetAverageUtilization: 30
+      - type: Resource
+        resource:
+          name: memory
+          targetAverageUtilization: 50
+  ports:
+    tritonriva:
+      port: 10051
+      exposedPort: 50051
+      expose: true
+      protocol: TCP
+    tritonhttp:
+      port: 18000
+      exposedPort: 8000
+      expose: true
+      protocol: TCP
+    tritongrpc:
+      port: 18001
+      exposedPort: 8001
+      expose: true
+      protocol: TCP
+
+# The horizontal pod autoscaling spec for Riva speech services.
+# Each replica needs a GPU.
+autoscaling:
+  minReplicas: 1
+  maxReplicas: 3
+  metrics:
+    - type: Pods
+      pods:
+        metric:
+          name: avg_time_queue_us
+        target:
+          type: AverageValue
+          averageValue: "600"
+
+# The custom metric used for tracking the need for load balancing.
+prometheus-adapter:
+  prometheus:
+    url: http://kube-prometheus-stack-prometheus.monitoring.svc.cluster.local
+    port: 9090
+  rules:
+    custom:
+      - seriesQuery: 'nv_inference_queue_duration_us{namespace="default",pod!=""}'
+        resources:
+          overrides:
+            namespace:
+              resource: "namespace"
+            pod:
+              resource: "pod"
+        name:
+          matches: "nv_inference_queue_duration_us"
+          as: "avg_time_queue_us"
+        metricsQuery: "avg(rate(nv_inference_queue_duration_us[30s])/(1+rate(nv_inference_request_success[30s]))) by (pod)"
+
+# Optional: Will run as a job a best-effort load test. See the documentation for more info: https://docs.nvidia.com/deeplearning/riva/user-guide/docs/asr/asr-performance.html#evaluation-process
+demoWorkload:
+  start: false
+  num_parallel_requests: 2048
+  nodeName: olympus-01
+  # resources:
+  #   requests:
+  #     memory: "1Gi"
+  #     cpu: "500m"
+  #   limits:
+  #     memory: "2Gi"
+  #     cpu: "1000m"
+
+# Deploy an interactive demo:
+assistant:
+  weatherStackAPIKey: ""
+  nodePort: 30809
+  # riva-tbyb-assistant: https://docs.nvidia.com/deeplearning/riva/user-guide/docs/samples/weather.html
+  # image: nvcr.io/nvidian/sae/riva-tbyb-assistant:2.0.0
+
+  # riva-tbyb-contact: https://docs.nvidia.com/deeplearning/riva/user-guide/docs/samples/callcenter.html
+  # image: nvcr.io/nvidian/sae/riva-tbyb-contact:2.0.0
+
+  # riva-tbyb-webapp: https://tbyb.rivaspeech.com/
+  image: nvcr.io/nvidian/sae/riva-tbyb-webapp:2.0.0
+
+imageurl: "nvcr.io"
+riva_ngc_org: "nvidia"
+riva_ngc_team: "riva"
+riva_ngc_image_version: "2.0.0"
+riva_ngc_model_version: "2.0.0"
+
+# For non ngc based images or custom images.
+raw_server_image: ""
+raw_servicemaker_image: ""
+raw_clientimage: ""
+
+riva:
+  useAffinity: false
+  # affinity:
+  #   nodeAffinity:
+  #     requiredDuringSchedulingIgnoredDuringExecution:
+  #       nodeSelectorTerms:
+  #         - matchExpressions:
+  #             - key: nvidia.com/gpu.count
+  #               operator: In
+  #               values:
+  #                 - "1"
+  #                 - "2"
+  #                 - "4"
+  #                 - "8"
+  resources:
+    requests:
+      memory: "2Gi"
+      cpu: "1000m"
+      nvidia.com/gpu: 1
+    limits:
+      memory: "16Gi"
+      cpu: "8000m"
+      nvidia.com/gpu: 1
+
+  speechImageName: riva-speech
+  pullPolicy: Always
+  speechServices:
+    asr: true
+    nlp: true
+    tts: true
+
+  volume:
+    accessMode: ReadWriteMany
+    persistentVolumeClaim: riva-tbyb-pvc
+    storage: 64Gi
+
+ngcCredentials:
+  registry: nvcr.io
+  username: $oauthtoken
+  password:
+  email:
+
+modelRepoGenerator:
+  # k8s secrets required for connecting to NGC for model and container artifacts
+  imagePullSecret: imagepullsecret
+  ngcSecret: modelpullsecret
+  modelDeploySecret: riva-model-deploy-key
+  modelDeployKey: tlt_encode
+
+  # container to use for generating the model repositories
+  imageName: riva-speech
+  pullPolicy: Always
+
+  # force redownload of artifacts
+  overwriteRMIRS: false
+
+  # rebuild inference engines
+  overwriteModels: false
+
+  # Model Repo Generator config files stored in NGC
+  ngcModelConfigs:
+    asr_langs: '[{"code":"en-US","desc":"English (en-US)"}]'
+    asr:
+      ### Citrinet
+      # - rmir_asr_citrinet_1024_en_us_str
+      - rmir_asr_citrinet_1024_en_us_str_thr
+      - rmir_asr_citrinet_1024_en_us_ofl
+
+      # - rmir_asr_citrinet_1024_de_de_str
+      # - rmir_asr_citrinet_1024_de_de_str_thr
+      # - rmir_asr_citrinet_1024_de_de_ofl
+
+      # - rmir_asr_citrinet_1024_es_us_str
+      # - rmir_asr_citrinet_1024_es_us_str_thr
+      # - rmir_asr_citrinet_1024_es_us_ofl
+
+      # - rmir_asr_citrinet_1024_ru_ru_str
+      # - rmir_asr_citrinet_1024_ru_ru_ofl
+      # - rmir_asr_citrinet_1024_zh_cn_str
+      # - rmir_asr_citrinet_1024_zh_cn_ofl
+
+      ### Conformer acoustic model, CPU decoder, streaming best latency configuration
+      # - rmir_asr_conformer_en_us_str
+
+      ### Conformer acoustic model, CPU decoder, streaming best throughput configuration
+      # - rmir_asr_conformer_en_us_str_thr
+
+      ### Conformer acoustic model, CPU decoder, offline configuration
+      # - rmir_asr_conformer_en_us_ofl
+
+      ### German Conformer acoustic model, CPU decoder, streaming best latency configuration
+      # - rmir_asr_conformer_de_de_str
+
+      ### German Conformer acoustic model, CPU decoder, streaming best throughput configuration
+      # - rmir_asr_conformer_de_de_str_thr
+
+      ### German Conformer acoustic model, CPU decoder, offline configuration
+      # - rmir_asr_conformer_de_de_ofl
+
+      ### Jasper Streaming w/ CPU decoder, best latency configuration
+      # - rmir_asr_jasper_en_us_str
+
+      ### Jasper Streaming w/ CPU decoder, best throughput configuration
+      # - rmir_asr_jasper_en_us_str_thr
+
+      ###  Jasper Offline w/ CPU decoder
+      # - rmir_asr_jasper_en_us_ofl
+
+      ### Quarztnet Streaming w/ CPU decoder, best latency configuration
+      # - rmir_asr_quartznet_en_us_str
+
+      ### Quarztnet Streaming w/ CPU decoder, best throughput configuration
+      # - rmir_asr_quartznet_en_us_str_thr
+
+      ### Quarztnet Offline w/ CPU decoder
+      # - rmir_asr_quartznet_en_us_ofl
+
+      ### Jasper Streaming w/ GPU decoder, best latency configuration
+      # - rmir_asr_jasper_en_us_str_gpu_decoder
+
+      ### Jasper Streaming w/ GPU decoder, best throughput configuration
+      # - rmir_asr_jasper_en_us_str_thr_gpu_decoder
+
+      ### Jasper Offline w/ GPU decoder
+      # - rmir_asr_jasper_en_us_ofl_gpu_decoder
+
+    nlp:
+      - rmir_nlp_intent_slot_bert_base
+      - rmir_nlp_question_answering_bert_base
+      - rmir_nlp_text_classification_bert_base
+      - rmir_nlp_named_entity_recognition_bert_base
+      ### Punctiation models
+      - rmir_nlp_punctuation_bert_base_en_us
+      # - rmir_nlp_punctuation_bert_base_de_de
+      # - rmir_nlp_punctuation_bert_base_es_us
+    tts_voices: '[{"code":"English-US-Female-1","desc":"English US Female"}, {"code":"English-US-Male-1","desc":"English US Male"}]'
+    tts:
+      - rmir_tts_fastpitch_hifigan_en_us_female_1
+      - rmir_tts_fastpitch_hifigan_en_us_male_1
