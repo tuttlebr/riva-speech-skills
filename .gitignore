@@ -4,4 +4,3 @@ ignore*
 .vscode/*
 riva-api-*.tgz
 *quickstart_*/
-assets/*
