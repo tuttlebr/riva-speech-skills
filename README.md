@@ -25,7 +25,7 @@ Conversational AI is the application of machine learning to develop language-bas
 
 The simplest example of conversational AI is a question and answer machine, commonly known as a chatbot. A chatbot is a software application that communicates with a user in natural language over the phone, messaging applications on websites, mobile apps, and so on. We have interacted with these applications during customer service phone calls or FAQ chat sessions. New deep learning-based conversational AI applications are being introduced every day, from voice assistants and AI-powered chatbots, to question answering systems that enhance customer service. Other popular applications are virtual assistants and multi-speaker transcription. Virtual assistants based on AI have come a long way in interacting with customers in a human-like way.
 
-![Figure 1: Conversational AI Applications](assets/conversational-ai-applications.png)
+![Figure 1: Conversational AI Applications](../assets/conversational-ai-applications.png)
 <sup>Figure 1: Conversational AI Applications</sup>
 
 Essentially a conversational AI application is a complex system that integrates multiple deep neural networks that must work in unison to deliver a delightful user experience with accurate, fast, and natural human-to-machine interaction. The aim of conversational AI is to make machine conversations virtually indistinguishable from how a human would converse. The next section describes the historical evolution of conversational AI.
@@ -52,7 +52,7 @@ Unlike rule-based systems, AI-based systems are designed to enable lifelike conv
 
 A typical intelligent conversation can take multiple turns (or multi-turns) and can be highly contextual. Simple queries such as "What is the weather today?”, "Turn on the light”, or "Set a reminder for 6:00 am tomorrow” can be done in a single conversation turn - one back-and-forth interaction. These queries are simple, require little to no input, and can be answered with just one response. However, users want to have long, back-and-forth, multi-turn conversations in one or multiple contexts. This is crucial for complex situations with a lot of input like booking a flight, making recommendations, or ordering food. Multi-turn allows customers to interrupt, ask questions not related to the current context, or change their minds about their request in the middle of a conversation.
 
-![Figure 2: Rule-based Assistant vs. AI-Powered Assistant](assets/rule-based-and-ai-based.png)
+![Figure 2: Rule-based Assistant vs. AI-Powered Assistant](../assets/rule-based-and-ai-based.png)
 <sup>Figure 2: Rule-based Assistant vs. AI-Powered Assistant</sup>
 
 The next generation of conversational AI applications are equipped to handle multi-turn, multidomains, and multi-user conversations. Using advanced speech and natural language technology, virtual assistants are able to navigate the complex dynamics of the history of conversations and identify the correct intent, domain, or context to drive the conversations towards a successful outcome. In addition, individual virtual assistants can be connected to a universal assistant to handle multiple domain-related tasks. For example, an employee can receive requests relating to sales, HR, and customer service. A universal virtual assistant takes these multi-domain questions and determines which of the linked bots to answer these questions. This eliminates the need for users to interact with different virtual assistants for different tasks, thereby improving the customers’ experience and overall productivity of the employees.
@@ -67,7 +67,7 @@ Conversational AI combines various technologies such as Automatic Speech Recogni
 - Natural Language Processing (NLP)
 - Text-to-Speech (TTS)
 
-![Figure 3: Conversational AI Pipeline](assets/conversational-ai-pipeline.png)
+![Figure 3: Conversational AI Pipeline](../assets/conversational-ai-pipeline.png)
 <sup>Figure 3: Conversational AI Pipeline</sup>
 
 First, the raw audio waveform serves as an input to the ASR model. At the ASR stage, the audio is processed and transcribed to text. Second, the application needs to understand what the text means, hence, the output from the ASR stage is passed to the NLP stage. This text is then interpreted, and the application generates a smart response during the NLP stage. Finally, the text is converted into speech signals to generate audio for the user during the TTS stage. This is the artificial production of human speech from text. Several deep learning models are connected to this pipeline to build a conversational AI application. These models employ deep learning techniques responsible for learning and improving the application over time.
