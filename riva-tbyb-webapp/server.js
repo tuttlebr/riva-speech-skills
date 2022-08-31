@@ -36,7 +36,7 @@ const session = require("express-session")({
     path: "/",
     httpOnly: false,
     secure: false,
-    maxAge: 1 * 5 * 60 * 1000, // 5 minutes
+    maxAge: 1 * 30 * 60 * 1000, // 30 minutes
   },
   genid: function (req) {
     return uuid.v4();

@@ -109,7 +109,7 @@ demoWorkload:
   #     memory: "2Gi"
   #     cpu: "1000m"
 
-# Deploy an interactive demo:
+# Deploy one of three interactive demos by uncommenting "image" line:
 assistant:
   weatherStackAPIKey: ""
   nodePort: 30809
@@ -125,8 +125,8 @@ assistant:
 imageurl: "nvcr.io"
 riva_ngc_org: "nvidia"
 riva_ngc_team: "riva"
-riva_ngc_image_version: "2.0.0"
-riva_ngc_model_version: "2.0.0"
+riva_ngc_image_version: "2.4.0"
+riva_ngc_model_version: "2.4.0"
 
 # For non ngc based images or custom images.
 raw_server_image: ""
@@ -197,9 +197,9 @@ modelRepoGenerator:
     asr_langs: '[{"code":"en-US","desc":"English (en-US)"}]'
     asr:
       ### Citrinet
-      # - rmir_asr_citrinet_1024_en_us_str
+      - rmir_asr_citrinet_1024_en_us_str
       - rmir_asr_citrinet_1024_en_us_str_thr
-      - rmir_asr_citrinet_1024_en_us_ofl
+      # - rmir_asr_citrinet_1024_en_us_ofl
 
       # - rmir_asr_citrinet_1024_de_de_str
       # - rmir_asr_citrinet_1024_de_de_str_thr

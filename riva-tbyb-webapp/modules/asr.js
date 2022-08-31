@@ -18,7 +18,8 @@
 const metrics = require("./logging").metrics;
 
 // const languageCode = 'en-US';
-const maxAudioSeconds = process.env.AWS_ENV == "dev" ? 5 * 60 : 30;
+// const maxAudioSeconds = process.env.AWS_ENV == "dev" ? 5 * 60 : 30;
+const maxAudioSeconds = 90 * 60;
 
 // Because of a quirk in proto-loader, we use static code gen to get the AudioEncoding enum,
 // and dynamic loading for the rest.

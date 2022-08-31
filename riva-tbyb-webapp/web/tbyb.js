@@ -50,7 +50,7 @@ const id = Math.floor(Math.random() * 10000)
   .toString()
   .padStart(4, "0");
 // const maxAudioSeconds = 30;
-const maxAudioSeconds = 5 * 60;
+const maxAudioSeconds = 90 * 60;
 const maxTTSChars = 400;
 const DEFAULT_LANG = "en-US";
 const DEFAULT_VOICE = "English-US-Female-1";

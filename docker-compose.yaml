@@ -16,3 +16,27 @@ services:
       context: riva-tbyb-webapp
       dockerfile: Dockerfile
     image: nvcr.io/nvidian/sae/riva-tbyb-webapp:2.0.0
+
+  librosa:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: librosa
+    ports:
+      - 8888:8888
+    entrypoint:
+      [
+        "jupyter",
+        "lab",
+        "--ip=0.0.0.0",
+        "--no-browser",
+        "--allow-root",
+        "--port=8888",
+        "--ServerApp.token=''",
+        "--ServerApp.password=''",
+        "--ServerApp.root_dir=/workspace",
+      ]
+    volumes:
+      - type: bind
+        source: .
+        target: /workspace

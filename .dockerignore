@@ -1,4 +1,10 @@
 node_modules
 npm-debug.log
-@eaDir
 assets/*
+ignore*
+*.tgz
+@eaDir/
+.vscode/*
+*quickstart_*/
+.ipynb_checkpoints
+*.wav
