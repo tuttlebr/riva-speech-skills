@@ -80,9 +80,9 @@ script.addEventListener("load", scriptLoaded, false);
 function scriptLoaded() {
   audio = document.getElementById("tts-output") || new Audio();
   var ttsField = document.getElementById("riva-tts-field");
-  if (ttsField != undefined) {
-    ttsField.setAttribute("maxlength", maxTTSChars);
-  }
+  // if (ttsField != undefined) {
+  //   ttsField.setAttribute("maxlength", maxTTSChars);
+  // }
 
   populateLangSelect(true);
   populateVoiceSelect(true);
@@ -420,7 +420,7 @@ function computeAudioLength(file) {
 
 function isAudioFileValid(file) {
   return new Promise(function (resolve) {
-    if (!fileTypes.includes(filename.split('.').pop())) {
+    if (!fileTypes.includes(filename.split(".").pop())) {
       showTranscript({
         transcript:
           file.type +

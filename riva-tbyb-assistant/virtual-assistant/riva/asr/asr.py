@@ -5,14 +5,15 @@
 # README.md file.
 # ==============================================================================
 
-import sys
-import grpc
 import os
+import sys
+
+import grpc
 import riva_api.audio_pb2 as ra
 import riva_api.riva_asr_pb2 as rasr
 import riva_api.riva_asr_pb2_grpc as rasr_srv
-from six.moves import queue
 from config import asr_config
+from six.moves import queue
 
 # Default ASR parameters - Used in case config values not specified in the config.py file
 VERBOSE = False
@@ -22,30 +23,32 @@ ENABLE_AUTOMATIC_PUNCTUATION = True
 STREAM_INTERIM_RESULTS = True
 RIVA_API_URL = os.getenv("RIVA_API_URL")
 
+
 class ASRPipe(object):
     """Opens a recording stream as a generator yielding the audio chunks."""
+
     def __init__(self):
         self.verbose = asr_config["VERBOSE"] if "VERBOSE" in asr_config else VERBOSE
         self.sampling_rate = SAMPLING_RATE
         self.language_code = LANGUAGE_CODE
         self.enable_automatic_punctuation = ENABLE_AUTOMATIC_PUNCTUATION
         self.stream_interim_results = STREAM_INTERIM_RESULTS
-        self.chunk = int(self.sampling_rate / 10) # 100ms
+        self.chunk = int(self.sampling_rate / 10)  # 100ms
         self._buff = queue.Queue()
         self._transcript = queue.Queue()
         self.closed = False
 
     def start(self):
         if self.verbose:
-            print('[Riva ASR] Creating Stream ASR channel: {}'.format(RIVA_API_URL))
+            print("[Riva ASR] Creating Stream ASR channel: {}".format(RIVA_API_URL))
         self.channel = grpc.insecure_channel(RIVA_API_URL)
         self.asr_client = rasr_srv.RivaSpeechRecognitionStub(self.channel)
 
     def close(self):
         self.closed = True
         self._buff.queue.clear()
-        self._buff.put(None) # means the end
-        del(self.channel)
+        self._buff.put(None)  # means the end
+        del self.channel
 
     def empty_asr_buffer(self):
         """Clears the audio buffer."""
@@ -68,6 +71,7 @@ class ASRPipe(object):
             yield trans
 
         """Generates byte-sequences of audio chunks from the audio buffer"""
+
     def build_request_generator(self):
         while not self.closed:
             # Use a blocking get() to ensure there's at least one chunk of
@@ -88,7 +92,7 @@ class ASRPipe(object):
                 except queue.Empty:
                     break
 
-            yield b''.join(data)
+            yield b"".join(data)
 
     def listen_print_loop(self, responses):
         """Iterates through server responses and populates the audio
@@ -126,23 +130,25 @@ class ASRPipe(object):
             #
             # If the previous result was longer than this one, we need to print
             # some extra spaces to overwrite the previous result
-            overwrite_chars = ' ' * (num_chars_printed - len(transcript))
+            overwrite_chars = " " * (num_chars_printed - len(transcript))
 
             if not result.is_final:
-                sys.stdout.write(transcript + overwrite_chars + '\r')
+                sys.stdout.write(transcript + overwrite_chars + "\r")
                 sys.stdout.flush()
-                interm_trans = transcript + overwrite_chars + '\r'
-                interm_str = f'event:{"intermediate-transcript"}\ndata: {interm_trans}\n\n'
+                interm_trans = transcript + overwrite_chars + "\r"
+                interm_str = (
+                    f'event:{"intermediate-transcript"}\ndata: {interm_trans}\n\n'
+                )
                 self._transcript.put(interm_str)
             else:
                 if self.verbose:
-                    print('[Riva ASR] Transcript:', transcript + overwrite_chars)
+                    print("[Riva ASR] Transcript:", transcript + overwrite_chars)
                 final_transcript = transcript + overwrite_chars
                 final_str = f'event:{"finished-speaking"}\ndata: {final_transcript}\n\n'
                 self._transcript.put(final_str)
             num_chars_printed = 0
         if self.verbose:
-            print('[Riva ASR] Exit')
+            print("[Riva ASR] Exit")
 
     def main_asr(self):
         """Creates a gRPC channel (thread-safe) with RIVA API server for
@@ -156,17 +162,19 @@ class ASRPipe(object):
             language_code=self.language_code,
             max_alternatives=1,
             enable_automatic_punctuation=self.enable_automatic_punctuation,
-            verbatim_transcripts=True
+            verbatim_transcripts=True,
         )
         streaming_config = rasr.StreamingRecognitionConfig(
-            config=config,
-            interim_results=self.stream_interim_results)
+            config=config, interim_results=self.stream_interim_results
+        )
 
         if self.verbose:
             print("[Riva ASR] Starting Background ASR process")
         self.request_generator = self.build_request_generator()
-        requests = (rasr.StreamingRecognizeRequest(audio_content=content)
-                    for content in self.request_generator)
+        requests = (
+            rasr.StreamingRecognizeRequest(audio_content=content)
+            for content in self.request_generator
+        )
 
         def build_generator(cfg, gen):
             yield rasr.StreamingRecognizeRequest(streaming_config=cfg)
@@ -176,6 +184,8 @@ class ASRPipe(object):
 
         if self.verbose:
             print("[Riva ASR] StreamingRecognize Start")
-        responses = self.asr_client.StreamingRecognize(build_generator(streaming_config, requests))
+        responses = self.asr_client.StreamingRecognize(
+            build_generator(streaming_config, requests)
+        )
         # Now, put the transcription responses to use.
         self.listen_print_loop(responses)

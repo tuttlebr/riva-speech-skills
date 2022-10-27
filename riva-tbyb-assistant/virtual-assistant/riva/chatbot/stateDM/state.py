@@ -5,14 +5,15 @@
 # README.md file.
 # ==============================================================================
 
-from abc import ABC, abstractmethod
 import sys
+from abc import ABC, abstractmethod
+
 
 class State(ABC):
-    """ State is an abstract class """
+    """State is an abstract class"""
 
     def __init__(self, name, bot, uid):
-        self.name = name    # Name of the state
+        self.name = name  # Name of the state
         self.bot = bot  # Name of the chatbot eg. "rivaWeather"
         self.uid = uid
         self.next_state = None
@@ -26,13 +27,11 @@ class State(ABC):
         return self.next_state
 
     def construct_message(self, request_data, text):
-        """ Constructs the response frame,
-        appending to a prev response if that exists """
-        message = {'type': 'text',
-                   'payload': {'text': text},
-                   'delay': 0}
+        """Constructs the response frame,
+        appending to a prev response if that exists"""
+        message = {"type": "text", "payload": {"text": text}, "delay": 0}
 
-        prev_response = request_data.get('response', False)
+        prev_response = request_data.get("response", False)
 
         # If there was an old response, append the new response to the list
         if prev_response:

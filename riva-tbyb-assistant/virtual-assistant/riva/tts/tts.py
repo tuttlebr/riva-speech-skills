@@ -5,16 +5,18 @@
 # README.md file.
 # ==============================================================================
 
+import logging as llogging
+import os
+import time
+
 import grpc
+import numpy as np
 import riva_api.riva_audio_pb2 as ra
 import riva_api.riva_tts_pb2 as rtts
 import riva_api.riva_tts_pb2_grpc as rtts_srv
-from six.moves import queue
 from config import tts_config
-import numpy as np
-import os
-import time
-import logging as llogging
+from six.moves import queue
+
 llogging.basicConfig(format="%(asctime)s %(message)s")
 logger = llogging.getLogger()
 logger.setLevel(llogging.DEBUG)
@@ -28,14 +30,13 @@ VOICE_NAME = VOICE_NAME_DICT["code"]
 RIVA_API_URL = os.getenv("RIVA_API_URL")
 logger.debug(VOICE_NAME)
 
+
 class TTSPipe(object):
     """Opens a gRPC channel to Riva TTS to synthesize speech
     from text in batch mode."""
 
     def __init__(self):
-        self.verbose = (
-            tts_config["VERBOSE"] if "VERBOSE" in tts_config else VERBOSE
-        )
+        self.verbose = tts_config["VERBOSE"] if "VERBOSE" in tts_config else VERBOSE
         self.sample_rate = SAMPLE_RATE
         self.language_code = LANGUAGE_CODE
         self.voice_name = VOICE_NAME
@@ -49,11 +50,7 @@ class TTSPipe(object):
 
     def start(self):
         if self.verbose:
-            print(
-                "[Riva TTS] Creating Stream TTS channel: {}".format(
-                    RIVA_API_URL
-                )
-            )
+            print("[Riva TTS] Creating Stream TTS channel: {}".format(RIVA_API_URL))
         self.channel = grpc.insecure_channel(RIVA_API_URL)
         self.tts_client = rtts_srv.RivaSpeechSynthesisStub(self.channel)
 
@@ -99,9 +96,7 @@ class TTSPipe(object):
                     )
                     data16 = np.int16(data32 * 23173.26)  # / 1.414 * 32767.0)
                     speech = bytes(data16.data)
-                    duration = (
-                        len(data16) * 2 / (self.sample_rate * 1 * 16 / 8)
-                    )
+                    duration = len(data16) * 2 / (self.sample_rate * 1 * 16 / 8)
                     if self.verbose:
                         print(f"[Riva TTS] The datalen is: {datalen}")
                         print(f"[Riva TTS] Duration of audio is: {duration}")

@@ -6,8 +6,9 @@
 # ==============================================================================
 
 import copy
-from riva.chatbot.stateDM.states import userInput, userLocationInput
+
 from config import riva_config
+from riva.chatbot.stateDM.states import userInput, userLocationInput
 
 verbose = riva_config["VERBOSE"]
 
@@ -24,10 +25,12 @@ class StateMachine:
 
     def execute_state(self, bot, context, text):
         # Fresh request frame
-        request_data = {'context': context,
-                        'text': text,
-                        'uid': self.uid,
-                        'payload': {}}
+        request_data = {
+            "context": context,
+            "text": text,
+            "uid": self.uid,
+            "payload": {},
+        }
 
         # TODO: Add support for !undo (saving previous context) and !reset
 
@@ -36,8 +39,7 @@ class StateMachine:
         while True:
             # Run the current state
             if verbose:
-                print("[stateDM] Executing state:",
-                                    self.currentState.name)
+                print("[stateDM] Executing state:", self.currentState.name)
             self.currentState.run(request_data)
             nextState = self.currentState.next()
 

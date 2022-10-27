@@ -267,15 +267,16 @@
                         <label class="input-group-text" for="voice-select">Voice</label>
                         <select class="form-select" id="voice-select"></select>
                     </div>
-                
-                    <div class="row">
-                        <div class="col-sm">
-                            <input type="text" class="form-control" id="riva-tts-field" placeholder="Enter some text here and click Synthesize!">
-                        </div>
-                        <div class="col-sm-auto">
-                            <button id="riva-tts-btn" type="submit" class="btn btn-primary h-100">Synthesize</button>
-                        </div>
+                    <div class="col-sm-auto">
+                        <button id="riva-tts-btn" type="submit" class="btn btn-primary h-100">Synthesize</button>
                     </div>
+                    <!-- <div class="row"> -->
+                        <div class="col-sm">
+                            <!-- <input type="text" class="form-control" id="riva-tts-field" placeholder="Enter some text here and click Synthesize!"> -->
+                            <textarea id="riva-tts-field" placeholder="Enter some text here and click Synthesize!" class="form-control" style="height: 100px; overflow-y:scroll;"></textarea>
+                        </div>
+
+                    <!-- </div> -->
                     <audio autoplay id="tts-output"></audio>
                 </div>
             </div>

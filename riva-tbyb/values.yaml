@@ -100,7 +100,7 @@ prometheus-adapter:
 demoWorkload:
   start: false
   num_parallel_requests: 2048
-  nodeName: olympus-01
+  nodeName: olympus-03
   # resources:
   #   requests:
   #     memory: "1Gi"
@@ -151,11 +151,11 @@ riva:
     requests:
       memory: "2Gi"
       cpu: "1000m"
-      nvidia.com/gpu: 1
+      nvidia.com/mig-4g.24gb: 1
     limits:
       memory: "16Gi"
       cpu: "8000m"
-      nvidia.com/gpu: 1
+      nvidia.com/mig-4g.24gb: 1
 
   speechImageName: riva-speech
   pullPolicy: Always

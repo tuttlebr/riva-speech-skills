@@ -18,7 +18,7 @@ const socketIo = require("socket.io");
 var ss = require("socket.io-stream");
 const fs = require("fs");
 const path = require("path");
-const process = require('process');
+const process = require("process");
 const https = require("https");
 const http = require("http");
 const cors = require("cors");
@@ -114,6 +114,13 @@ redisClient.on("error", (err) => {
 redisClient.on("connect", function () {
   logger.info("REDIS CONNECTED");
 });
+
+/**
+ * Chunk TTS response, with appropriate headers
+ */
+function* string_chunk(str, size = maxChars) {
+  for (let i = 0; i < str.length; i += size) yield str.slice(i, i + size);
+}
 
 /**
  * TTS response, with appropriate headers
@@ -344,19 +351,39 @@ function setupServer() {
         }
       })
       .then(function () {
-        ttstext = req.query.text || "backup text";
-        if (ttstext.length > maxChars) {
-          ttstext = ttstext.substring(0, maxChars);
-        }
-        cache_key = JSON.stringify({ text: ttstext, voice: voice });
+        raw_tts = req.query.text || "backup text";
+        const ttstext_gen = string_chunk(raw_tts);
+        for (let ttstext of ttstext_gen) {
+          // if (ttstext.length > maxChars) {
+          //   ttstext = ttstext.substring(0, maxChars);
+          // }
 
-        // check if the query exists in the cache
-        tts_buffer = cache.get(cache_key);
-        if (tts_buffer == undefined) {
-          // tts is not cached
-          tts.speak(ttstext, voice).then(function (ttsResult) {
-            tts_buffer = Buffer.from(ttsResult, "binary");
-            cache.set(cache_key, tts_buffer);
+          cache_key = JSON.stringify({ text: ttstext, voice: voice });
+
+          // check if the query exists in the cache
+          tts_buffer = cache.get(cache_key);
+          if (tts_buffer == undefined) {
+            // tts is not cached
+            tts.speak(ttstext, voice).then(function (ttsResult) {
+              tts_buffer = Buffer.from(ttsResult, "binary");
+              cache.set(cache_key, tts_buffer);
+              processing_ms = Date.now() - ttsStart;
+              write_responses(tts_buffer, res, req);
+
+              metrics.tts_fulfilled.inc();
+              logger.info("TTS", {
+                voice: voice,
+                processing_ms: processing_ms,
+                elapsed_ms: Date.now() - ttsStart,
+                duration: tts.getDuration(tts_buffer),
+                cacheHit: false,
+                sourceIP: req.ip,
+                host: req.headers.host,
+                referer: req.headers.referer,
+                sessionID: req.sessionID,
+              });
+            });
+          } else {
             processing_ms = Date.now() - ttsStart;
             write_responses(tts_buffer, res, req);
 
@@ -366,29 +393,13 @@ function setupServer() {
               processing_ms: processing_ms,
               elapsed_ms: Date.now() - ttsStart,
               duration: tts.getDuration(tts_buffer),
-              cacheHit: false,
+              cacheHit: true,
               sourceIP: req.ip,
               host: req.headers.host,
               referer: req.headers.referer,
               sessionID: req.sessionID,
             });
-          });
-        } else {
-          processing_ms = Date.now() - ttsStart;
-          write_responses(tts_buffer, res, req);
-
-          metrics.tts_fulfilled.inc();
-          logger.info("TTS", {
-            voice: voice,
-            processing_ms: processing_ms,
-            elapsed_ms: Date.now() - ttsStart,
-            duration: tts.getDuration(tts_buffer),
-            cacheHit: true,
-            sourceIP: req.ip,
-            host: req.headers.host,
-            referer: req.headers.referer,
-            sessionID: req.sessionID,
-          });
+          }
         }
       })
       .catch(function (error) {

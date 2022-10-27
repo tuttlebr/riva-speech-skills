@@ -13,12 +13,15 @@ user_conversation_cnt = 0
 
 def create_chatbot(user_conversation_index, sio, verbose=False):
     if user_conversation_index not in userbots:
-        userbots[user_conversation_index] = ChatBot(user_conversation_index,
-                                                                verbose=verbose)
+        userbots[user_conversation_index] = ChatBot(
+            user_conversation_index, verbose=verbose
+        )
         userbots[user_conversation_index].start_asr(sio)
         if verbose:
-            print('[Riva Chatbot] Chatbot created with user conversation index:' +
-                                    f'[{user_conversation_index}]')
+            print(
+                "[Riva Chatbot] Chatbot created with user conversation index:"
+                + f"[{user_conversation_index}]"
+            )
 
 
 def get_new_user_conversation_index():

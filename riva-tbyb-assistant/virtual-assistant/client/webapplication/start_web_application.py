@@ -6,10 +6,10 @@
 # ==============================================================================
 
 
+import logging as llogging
+
 from client.webapplication.server.server import *
 from config import client_config
-
-import logging as llogging
 
 llogging.basicConfig(format="%(asctime)s %(message)s")
 logger = llogging.getLogger()
