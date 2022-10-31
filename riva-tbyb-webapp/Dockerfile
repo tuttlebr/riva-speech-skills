@@ -5,7 +5,6 @@ WORKDIR /usr/src/app
 COPY --chown=node:node . /usr/src/app
 RUN npm install --save hcaptcha \
     && npm ci --only=production
-
 USER node
 ENTRYPOINT ["/usr/local/bin/dumb-init", "--"]
 CMD [ "node", "server.js" ]

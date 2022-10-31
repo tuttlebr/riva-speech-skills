@@ -50,7 +50,7 @@ const captchaSecret = "0x0000000000000000000000000000000000000000";
 const ASRPipe = require("./modules/asr");
 const tts = require("./modules/tts");
 const timeout_ms = process.env.AWS_ENV == "dev" ? 5 * 60 * 1000 : 30 * 1000;
-const maxChars = 400;
+const maxTTSChars = 1200;
 
 const asr_langs = JSON.parse(process.env.ASR_LANGS);
 const langCodes = new Set(
@@ -114,13 +114,6 @@ redisClient.on("error", (err) => {
 redisClient.on("connect", function () {
   logger.info("REDIS CONNECTED");
 });
-
-/**
- * Chunk TTS response, with appropriate headers
- */
-function* string_chunk(str, size = maxChars) {
-  for (let i = 0; i < str.length; i += size) yield str.slice(i, i + size);
-}
 
 /**
  * TTS response, with appropriate headers
@@ -327,6 +320,10 @@ function setupServer() {
   });
 
   app.get("/tts", function (req, res) {
+    // str = req.query.text || "backup text";
+    // const words = str.split(/(.{400})/).filter(O=>O);
+
+    // for (let i=0; i < words.length; i++){
     var ttsStart = Date.now();
     var ttstext;
     var processing_ms;
@@ -351,39 +348,20 @@ function setupServer() {
         }
       })
       .then(function () {
-        raw_tts = req.query.text || "backup text";
-        const ttstext_gen = string_chunk(raw_tts);
-        for (let ttstext of ttstext_gen) {
-          // if (ttstext.length > maxChars) {
-          //   ttstext = ttstext.substring(0, maxChars);
-          // }
+        ttstext = req.query.text || "backup text";
+        if (ttstext.length > maxTTSChars) {
+          ttstext = ttstext.substring(0, maxTTSChars);
+        }
 
-          cache_key = JSON.stringify({ text: ttstext, voice: voice });
+        cache_key = JSON.stringify({ text: ttstext, voice: voice });
 
-          // check if the query exists in the cache
-          tts_buffer = cache.get(cache_key);
-          if (tts_buffer == undefined) {
-            // tts is not cached
-            tts.speak(ttstext, voice).then(function (ttsResult) {
-              tts_buffer = Buffer.from(ttsResult, "binary");
-              cache.set(cache_key, tts_buffer);
-              processing_ms = Date.now() - ttsStart;
-              write_responses(tts_buffer, res, req);
-
-              metrics.tts_fulfilled.inc();
-              logger.info("TTS", {
-                voice: voice,
-                processing_ms: processing_ms,
-                elapsed_ms: Date.now() - ttsStart,
-                duration: tts.getDuration(tts_buffer),
-                cacheHit: false,
-                sourceIP: req.ip,
-                host: req.headers.host,
-                referer: req.headers.referer,
-                sessionID: req.sessionID,
-              });
-            });
-          } else {
+        // check if the query exists in the cache
+        tts_buffer = cache.get(cache_key);
+        if (tts_buffer == undefined) {
+          // tts is not cached
+          tts.speak(ttstext, voice).then(function (ttsResult) {
+            tts_buffer = Buffer.from(ttsResult, "binary");
+            cache.set(cache_key, tts_buffer);
             processing_ms = Date.now() - ttsStart;
             write_responses(tts_buffer, res, req);
 
@@ -393,13 +371,29 @@ function setupServer() {
               processing_ms: processing_ms,
               elapsed_ms: Date.now() - ttsStart,
               duration: tts.getDuration(tts_buffer),
-              cacheHit: true,
+              cacheHit: false,
               sourceIP: req.ip,
               host: req.headers.host,
               referer: req.headers.referer,
               sessionID: req.sessionID,
             });
-          }
+          });
+        } else {
+          processing_ms = Date.now() - ttsStart;
+          write_responses(tts_buffer, res, req);
+
+          metrics.tts_fulfilled.inc();
+          logger.info("TTS", {
+            voice: voice,
+            processing_ms: processing_ms,
+            elapsed_ms: Date.now() - ttsStart,
+            duration: tts.getDuration(tts_buffer),
+            cacheHit: true,
+            sourceIP: req.ip,
+            host: req.headers.host,
+            referer: req.headers.referer,
+            sessionID: req.sessionID,
+          });
         }
       })
       .catch(function (error) {

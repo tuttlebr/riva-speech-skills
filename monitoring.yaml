@@ -1,0 +1,451 @@
+apiVersion: v1
+items:
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+      meta.helm.sh/release-name: kube-prometheus-stack
+      meta.helm.sh/release-namespace: monitoring
+    creationTimestamp: "2022-10-30T23:41:02Z"
+    generation: 1
+    labels:
+      app.kubernetes.io/instance: kube-prometheus-stack
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: grafana
+      app.kubernetes.io/version: 9.0.5
+      helm.sh/chart: grafana-6.32.10
+    name: kube-prometheus-stack-grafana
+    namespace: monitoring
+    resourceVersion: "6777"
+    uid: 454e709d-0a26-4c80-a52d-7216298ef3e0
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app.kubernetes.io/instance: kube-prometheus-stack
+        app.kubernetes.io/name: grafana
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        annotations:
+          checksum/config: 8d7452f2b2ecaee542272b11b53767a76d8d7390542aa7497e205a98acab67ce
+          checksum/dashboards-json-config: 01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b
+          checksum/sc-dashboard-provider-config: d42e0d2dcd340dd08e9f003be27a96730df30586f144193fbbe4dad7c11ce342
+          checksum/secret: 39007d7271a8753d86ab5d4c17968a8697374769f976393b6a6c26ad6cb2d2fd
+        creationTimestamp: null
+        labels:
+          app.kubernetes.io/instance: kube-prometheus-stack
+          app.kubernetes.io/name: grafana
+      spec:
+        automountServiceAccountToken: true
+        containers:
+        - env:
+          - name: METHOD
+            value: WATCH
+          - name: LABEL
+            value: grafana_dashboard
+          - name: LABEL_VALUE
+            value: "1"
+          - name: LOG_LEVEL
+            value: INFO
+          - name: FOLDER
+            value: /tmp/dashboards
+          - name: RESOURCE
+            value: both
+          image: quay.io/kiwigrid/k8s-sidecar:1.19.2
+          imagePullPolicy: IfNotPresent
+          name: grafana-sc-dashboard
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /tmp/dashboards
+            name: sc-dashboard-volume
+        - env:
+          - name: METHOD
+            value: WATCH
+          - name: LABEL
+            value: grafana_datasource
+          - name: LABEL_VALUE
+            value: "1"
+          - name: FOLDER
+            value: /etc/grafana/provisioning/datasources
+          - name: RESOURCE
+            value: both
+          - name: REQ_USERNAME
+            valueFrom:
+              secretKeyRef:
+                key: admin-user
+                name: kube-prometheus-stack-grafana
+          - name: REQ_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: admin-password
+                name: kube-prometheus-stack-grafana
+          - name: REQ_URL
+            value: http://localhost:3000/api/admin/provisioning/datasources/reload
+          - name: REQ_METHOD
+            value: POST
+          image: quay.io/kiwigrid/k8s-sidecar:1.19.2
+          imagePullPolicy: IfNotPresent
+          name: grafana-sc-datasources
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /etc/grafana/provisioning/datasources
+            name: sc-datasources-volume
+        - env:
+          - name: GF_SECURITY_ADMIN_USER
+            valueFrom:
+              secretKeyRef:
+                key: admin-user
+                name: kube-prometheus-stack-grafana
+          - name: GF_SECURITY_ADMIN_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                key: admin-password
+                name: kube-prometheus-stack-grafana
+          - name: GF_PATHS_DATA
+            value: /var/lib/grafana/
+          - name: GF_PATHS_LOGS
+            value: /var/log/grafana
+          - name: GF_PATHS_PLUGINS
+            value: /var/lib/grafana/plugins
+          - name: GF_PATHS_PROVISIONING
+            value: /etc/grafana/provisioning
+          image: grafana/grafana:9.0.5
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 10
+            httpGet:
+              path: /api/health
+              port: 3000
+              scheme: HTTP
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 30
+          name: grafana
+          ports:
+          - containerPort: 80
+            name: http-web
+            protocol: TCP
+          - containerPort: 3000
+            name: grafana
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /api/health
+              port: 3000
+              scheme: HTTP
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /etc/grafana/grafana.ini
+            name: config
+            subPath: grafana.ini
+          - mountPath: /var/lib/grafana
+            name: storage
+          - mountPath: /tmp/dashboards
+            name: sc-dashboard-volume
+          - mountPath: /etc/grafana/provisioning/dashboards/sc-dashboardproviders.yaml
+            name: sc-dashboard-provider
+            subPath: provider.yaml
+          - mountPath: /etc/grafana/provisioning/datasources
+            name: sc-datasources-volume
+        dnsPolicy: ClusterFirst
+        enableServiceLinks: true
+        nodeSelector:
+          node-role.kubernetes.io/master: ""
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext:
+          fsGroup: 472
+          runAsGroup: 472
+          runAsUser: 472
+        serviceAccount: kube-prometheus-stack-grafana
+        serviceAccountName: kube-prometheus-stack-grafana
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - configMap:
+            defaultMode: 420
+            name: kube-prometheus-stack-grafana
+          name: config
+        - emptyDir: {}
+          name: storage
+        - emptyDir: {}
+          name: sc-dashboard-volume
+        - configMap:
+            defaultMode: 420
+            name: kube-prometheus-stack-grafana-config-dashboards
+          name: sc-dashboard-provider
+        - emptyDir: {}
+          name: sc-datasources-volume
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: "2022-10-30T23:41:22Z"
+      lastUpdateTime: "2022-10-30T23:41:22Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    - lastTransitionTime: "2022-10-30T23:41:02Z"
+      lastUpdateTime: "2022-10-30T23:41:22Z"
+      message: ReplicaSet "kube-prometheus-stack-grafana-5c6fbdb6fd" has successfully
+        progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+      meta.helm.sh/release-name: kube-prometheus-stack
+      meta.helm.sh/release-namespace: monitoring
+    creationTimestamp: "2022-10-30T23:41:02Z"
+    generation: 1
+    labels:
+      app.kubernetes.io/component: metrics
+      app.kubernetes.io/instance: kube-prometheus-stack
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/name: kube-state-metrics
+      app.kubernetes.io/part-of: kube-state-metrics
+      app.kubernetes.io/version: 2.5.0
+      helm.sh/chart: kube-state-metrics-4.15.0
+      release: kube-prometheus-stack
+    name: kube-prometheus-stack-kube-state-metrics
+    namespace: monitoring
+    resourceVersion: "20761"
+    uid: c2c4181d-d5f5-46ff-971a-7367c49c960f
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app.kubernetes.io/instance: kube-prometheus-stack
+        app.kubernetes.io/name: kube-state-metrics
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app.kubernetes.io/component: metrics
+          app.kubernetes.io/instance: kube-prometheus-stack
+          app.kubernetes.io/managed-by: Helm
+          app.kubernetes.io/name: kube-state-metrics
+          app.kubernetes.io/part-of: kube-state-metrics
+          app.kubernetes.io/version: 2.5.0
+          helm.sh/chart: kube-state-metrics-4.15.0
+          release: kube-prometheus-stack
+      spec:
+        containers:
+        - args:
+          - --port=8080
+          - --resources=certificatesigningrequests,configmaps,cronjobs,daemonsets,deployments,endpoints,horizontalpodautoscalers,ingresses,jobs,limitranges,mutatingwebhookconfigurations,namespaces,networkpolicies,nodes,persistentvolumeclaims,persistentvolumes,poddisruptionbudgets,pods,replicasets,replicationcontrollers,resourcequotas,secrets,services,statefulsets,storageclasses,validatingwebhookconfigurations,volumeattachments
+          - --telemetry-port=8081
+          image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.5.0
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /healthz
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          name: kube-state-metrics
+          ports:
+          - containerPort: 8080
+            name: http
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 5
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext:
+          fsGroup: 65534
+          runAsGroup: 65534
+          runAsUser: 65534
+        serviceAccount: kube-prometheus-stack-kube-state-metrics
+        serviceAccountName: kube-prometheus-stack-kube-state-metrics
+        terminationGracePeriodSeconds: 30
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: "2022-10-30T23:41:02Z"
+      lastUpdateTime: "2022-10-30T23:41:12Z"
+      message: ReplicaSet "kube-prometheus-stack-kube-state-metrics-5f6d6c64d5" has
+        successfully progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    - lastTransitionTime: "2022-10-31T00:48:22Z"
+      lastUpdateTime: "2022-10-31T00:48:22Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      deployment.kubernetes.io/revision: "1"
+      meta.helm.sh/release-name: kube-prometheus-stack
+      meta.helm.sh/release-namespace: monitoring
+    creationTimestamp: "2022-10-30T23:41:02Z"
+    generation: 1
+    labels:
+      app: kube-prometheus-stack-operator
+      app.kubernetes.io/instance: kube-prometheus-stack
+      app.kubernetes.io/managed-by: Helm
+      app.kubernetes.io/part-of: kube-prometheus-stack
+      app.kubernetes.io/version: 39.5.0
+      chart: kube-prometheus-stack-39.5.0
+      heritage: Helm
+      release: kube-prometheus-stack
+    name: kube-prometheus-stack-operator
+    namespace: monitoring
+    resourceVersion: "6566"
+    uid: 8b7d90ca-0d5d-4fdd-b001-af4b2e4b4cfa
+  spec:
+    progressDeadlineSeconds: 600
+    replicas: 1
+    revisionHistoryLimit: 10
+    selector:
+      matchLabels:
+        app: kube-prometheus-stack-operator
+        release: kube-prometheus-stack
+    strategy:
+      rollingUpdate:
+        maxSurge: 25%
+        maxUnavailable: 25%
+      type: RollingUpdate
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          app: kube-prometheus-stack-operator
+          app.kubernetes.io/instance: kube-prometheus-stack
+          app.kubernetes.io/managed-by: Helm
+          app.kubernetes.io/part-of: kube-prometheus-stack
+          app.kubernetes.io/version: 39.5.0
+          chart: kube-prometheus-stack-39.5.0
+          heritage: Helm
+          release: kube-prometheus-stack
+      spec:
+        containers:
+        - args:
+          - --kubelet-service=kube-system/kube-prometheus-stack-kubelet
+          - --localhost=127.0.0.1
+          - --prometheus-config-reloader=quay.io/prometheus-operator/prometheus-config-reloader:v0.58.0
+          - --config-reloader-cpu-request=200m
+          - --config-reloader-cpu-limit=200m
+          - --config-reloader-memory-request=50Mi
+          - --config-reloader-memory-limit=50Mi
+          - --thanos-default-base-image=quay.io/thanos/thanos:v0.27.0
+          - --web.enable-tls=true
+          - --web.cert-file=/cert/cert
+          - --web.key-file=/cert/key
+          - --web.listen-address=:10250
+          - --web.tls-min-version=VersionTLS13
+          image: quay.io/prometheus-operator/prometheus-operator:v0.58.0
+          imagePullPolicy: IfNotPresent
+          name: kube-prometheus-stack
+          ports:
+          - containerPort: 10250
+            name: https
+            protocol: TCP
+          resources: {}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+          - mountPath: /cert
+            name: tls-secret
+            readOnly: true
+        dnsPolicy: ClusterFirst
+        nodeSelector:
+          node-role.kubernetes.io/master: ""
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext:
+          fsGroup: 65534
+          runAsGroup: 65534
+          runAsNonRoot: true
+          runAsUser: 65534
+        serviceAccount: kube-prometheus-stack-operator
+        serviceAccountName: kube-prometheus-stack-operator
+        terminationGracePeriodSeconds: 30
+        volumes:
+        - name: tls-secret
+          secret:
+            defaultMode: 420
+            secretName: kube-prometheus-stack-admission
+  status:
+    availableReplicas: 1
+    conditions:
+    - lastTransitionTime: "2022-10-30T23:41:06Z"
+      lastUpdateTime: "2022-10-30T23:41:06Z"
+      message: Deployment has minimum availability.
+      reason: MinimumReplicasAvailable
+      status: "True"
+      type: Available
+    - lastTransitionTime: "2022-10-30T23:41:02Z"
+      lastUpdateTime: "2022-10-30T23:41:06Z"
+      message: ReplicaSet "kube-prometheus-stack-operator-85dcf9866c" has successfully
+        progressed.
+      reason: NewReplicaSetAvailable
+      status: "True"
+      type: Progressing
+    observedGeneration: 1
+    readyReplicas: 1
+    replicas: 1
+    updatedReplicas: 1
+kind: List
+metadata:
+  resourceVersion: ""
+  selfLink: ""

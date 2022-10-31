@@ -4,4 +4,3 @@ ignore*
 .vscode/*
 *quickstart_*/
 .ipynb_checkpoints
-*.wav

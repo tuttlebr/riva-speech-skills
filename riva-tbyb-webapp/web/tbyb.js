@@ -51,7 +51,7 @@ const id = Math.floor(Math.random() * 10000)
   .padStart(4, "0");
 // const maxAudioSeconds = 30;
 const maxAudioSeconds = 90 * 60;
-const maxTTSChars = 400;
+const maxTTSChars = 1200;
 const DEFAULT_LANG = "en-US";
 const DEFAULT_VOICE = "English-US-Female-1";
 var timerInterval;
@@ -80,9 +80,9 @@ script.addEventListener("load", scriptLoaded, false);
 function scriptLoaded() {
   audio = document.getElementById("tts-output") || new Audio();
   var ttsField = document.getElementById("riva-tts-field");
-  // if (ttsField != undefined) {
-  //   ttsField.setAttribute("maxlength", maxTTSChars);
-  // }
+  if (ttsField != undefined) {
+    ttsField.setAttribute("maxlength", maxTTSChars);
+  }
 
   populateLangSelect(true);
   populateVoiceSelect(true);
